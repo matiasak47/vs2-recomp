@@ -1,7 +1,7 @@
 // The in-game menu, drawn with RmlUi over the paused game (assets/ui/menu.rml and menu.rcss).
 // The host builds the pages; the menu handles the keyboard, pads and mouse.
 #pragma once
-#include <SDL3/SDL.h>
+#include "SDL3/SDL.h"
 #include <functional>
 #include <memory>
 #include <string>

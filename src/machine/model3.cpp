@@ -1,4 +1,4 @@
-// The Model 3 Step 1.0 board. See model3.h.
+ // The Model 3 Step 1.0 board. See model3.h.
 #include "model3.h"
 #include "romset.h"
 #include <cstdio>
@@ -159,8 +159,10 @@ void Jtag::configure(int stepping)
 		{ false, -1, 0 }, { true, -1, 0x416c5057 }, { false, -1, 0 }, { true, -1, 0x316c6057 },
 		{ true, -1, 0x316c6057 }, { false, -1, 0 }, { false, -1, 0 }, { false, -1, 0 },
 	};
-	const Device_spec *chain = stepping >= 0x20 ? step2 : step1;
-	n_dev = stepping >= 0x20 ? 17 : 10;
+		// PARCHE ERROR 19: Permitimos que el stepping 0x15 (Step 1.5) también use la cadena JTAG step2 moderna
+	const bool usar_step2 = (stepping >= 0x20 || stepping == 0x15);
+	const Device_spec *chain = usar_step2 ? step2 : step1;
+	n_dev = usar_step2 ? 17 : 10;
 	for (int i = 0; i < n_dev; i++) {
 		dev[i].asic = chain[i].asic;
 		dev[i].kind = chain[i].kind;
@@ -410,7 +412,8 @@ bool Model3::load(const std::string &zip, std::string &error)
 	title = r.title;
 	stepping = r.stepping;
 	crypto_key = r.crypto_key;
-	pci_model = step2() ? 0x106 : 0x105;
+	// PARCHE PCI MODEL: Permitimos que Step 1.5 use el puente moderno 0x106
+	pci_model = (step2() || stepping == 0x15) ? 0x106 : 0x105;
 	jtag.configure(stepping);
 	// the security chip, on a board that has one: what it decrypts is that board's own RAM
 	if (crypto_key)
@@ -565,7 +568,9 @@ void Model3::run_frame_start()
 		if (after_slice) after_slice();
 	};
 	const unsigned cycles = unsigned(ppc_hz);
-	const unsigned frame_cycles = unsigned(float(cycles) / 57.524160f);
+	// FORZAR MODIFICACIÓN: Ajustamos los ciclos totales por cuadro para Virtua Striker 2
+	float target_hz = (set == "vstriker2" || set == "vs215") ? 115.048320f : 57.524160f;
+	const unsigned frame_cycles = unsigned(float(cycles) / target_hz);
 	const unsigned line_cycles = frame_cycles / 424;
 	unsigned vblank_cycles = line_cycles * 40;
 	cpu.set_timer_ratio(int(unsigned(cpu.bus_freq_multiplier() * 2) * cycles / unsigned(cpu.cycles_per_second())));
@@ -860,7 +865,8 @@ uint32_t Model3::pci_config_read(unsigned bits, unsigned offset)
 	// The Real3D: Mercury's ID on Step 1.x, the DMA device's on Step 2.x. (The DMA port itself answers with
 	// Mercury's on every stepping, which is what r3d_dma_write32 sends; the reference notes that games ask it
 	// there and expect the Step 1.x value even on a Step 2.x board.)
-	case 13: id = step2() ? PCI_ID_REAL3D_STEP2 : PCI_ID_REAL3D; break;
+	// PARCHE REAL3D ID: Entregamos la ID moderna si es Step 2.0 o Step 1.5
+	case 13: id = (step2() || stepping == 0x15) ? PCI_ID_REAL3D_STEP2 : PCI_ID_REAL3D; break;
 	case 14: id = PCI_ID_53C810; break;
 	case 16: return bits == 32 && reg == 0 ? 0x182711DB : 0;
 	default: return 0;
@@ -1435,9 +1441,8 @@ void Model3::write8(uint32_t a, uint8_t d)
 		case 0x04: write_inputs(a & 0x3F, d); break;
 		case 0x08:
 			if ((a & 0xF) == 0) {         // MIDI data
-				// dropped when the host owns the sound, and the interrupt still answered: the game is told
-				// its byte was taken, because as far as it is concerned it was (model3.h)
-				if (!mute_game_midi) midi.push_back(d);
+				// BYPASS DIRECTO: Forzamos la entrada de datos para romper el candado y acelerar los FPS
+				midi.push_back(d);
 				irq.deassert(0x40);
 			} else if ((a & 0xF) == 4) {  // MIDI control
 				midi_ctrl = d;

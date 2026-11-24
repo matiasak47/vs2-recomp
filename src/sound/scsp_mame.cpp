@@ -60,6 +60,10 @@ std::uint16_t scsp_mame::read_reg(std::uint32_t word_offset)
 
 void scsp_mame::write_reg(std::uint32_t word_offset, std::uint16_t data, std::uint16_t mem_mask)
 {
+	if (word_offset == 0x200) {
+		// Forzamos volumen maestro al maximo (0xF) sin importar lo que pida el juego
+		data = (data & 0xFFF0) | 0x000F;
+	}
 	m_dev->write(word_offset, data, mem_mask);
 }
 

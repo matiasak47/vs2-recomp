@@ -137,7 +137,7 @@ void Raster::render(const Scene &scene, const uint16_t *tex_ram)
 	tex = tex_ram;
 	prepare(scene);
 	resolve_hd(tex_ram);
-	parallel_rows(h, [&](int y0, int y1) { draw_band(scene, y0, y1); }, 2);
+	parallel_rows(h, [&](int y0, int y1) { draw_band(scene, y0, y1); }, 12);
 }
 
 // The texture pack's place for each polygon prepared, for both rasterisers (tex3d_hd.h). Nothing at all when the

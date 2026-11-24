@@ -230,6 +230,99 @@ const RomFile SR2_ROMS[] = {
 	{ "mpr-20615.24", 0x62E8A94A, ROM_SAMPLES, 0x0400000, 1, 1, false },
 };
 
+// Virtua Striker 2 (Export, Step 2.0). The same board as Sega Rally 2 and no security chip, but its own program
+// ROMs (epr-20467 to 20470), its banked CROM (mpr-19769 to 19784), its Real3D textures (mpr-19787 to 19802) and
+// its sound program and samples. Its program is a plain copy in the fixed CROM, not a gzip: the boot copies it
+// plainly to RAM 0, so gzip_program is false. (Layout: Supermodel's Config/Games.xml "vs2", CRCs verified
+// against ROMS/vstriker2.zip.)
+const RomFile VS2_ROMS[] = {
+	{ "epr-20470.20", 0x2F62B292, ROM_CROM, 0x0000000, 8, 2, true },
+	{ "epr-20469.19", 0x9D7521F6, ROM_CROM, 0x0000002, 8, 2, true },
+	{ "epr-20468.18", 0xF0F0B6EA, ROM_CROM, 0x0000004, 8, 2, true },
+	{ "epr-20467.17", 0x25D7AE73, ROM_CROM, 0x0000006, 8, 2, true },
+	{ "mpr-19772.4", 0x6DB7B9D0, ROM_BANKED, 0x0000000, 8, 2, true },
+	{ "mpr-19771.3", 0x189C510F, ROM_BANKED, 0x0000002, 8, 2, true },
+	{ "mpr-19770.2", 0x91F690B0, ROM_BANKED, 0x0000004, 8, 2, true },
+	{ "mpr-19769.1", 0xDC020031, ROM_BANKED, 0x0000006, 8, 2, true },
+	{ "mpr-19776.8", 0x5B31C7C1, ROM_BANKED, 0x1000000, 8, 2, true },
+	{ "mpr-19775.7", 0xA6B32BD9, ROM_BANKED, 0x1000002, 8, 2, true },
+	{ "mpr-19774.6", 0x1D61D287, ROM_BANKED, 0x1000004, 8, 2, true },
+	{ "mpr-19773.5", 0x4E381AE7, ROM_BANKED, 0x1000006, 8, 2, true },
+	{ "mpr-19780.12", 0x38508791, ROM_BANKED, 0x2000000, 8, 2, true },
+	{ "mpr-19779.11", 0x2242B21B, ROM_BANKED, 0x2000002, 8, 2, true },
+	{ "mpr-19778.10", 0x2192B189, ROM_BANKED, 0x2000004, 8, 2, true },
+	{ "mpr-19777.9", 0xC8F216A6, ROM_BANKED, 0x2000006, 8, 2, true },
+	{ "mpr-19784.16", 0xA1CC70BE, ROM_BANKED, 0x3000000, 8, 2, true },
+	{ "mpr-19783.15", 0x47C3D726, ROM_BANKED, 0x3000002, 8, 2, true },
+	{ "mpr-19782.14", 0x43B43EEF, ROM_BANKED, 0x3000004, 8, 2, true },
+	{ "mpr-19781.13", 0x783213F4, ROM_BANKED, 0x3000006, 8, 2, true },
+	{ "mpr-19787.26", 0x856CC4AD, ROM_VROM, 0, 32, 2, false },
+	{ "mpr-19788.27", 0x72EF970A, ROM_VROM, 2, 32, 2, false },
+	{ "mpr-19789.28", 0x076ADD9A, ROM_VROM, 4, 32, 2, false },
+	{ "mpr-19790.29", 0x74CE238C, ROM_VROM, 6, 32, 2, false },
+	{ "mpr-19791.30", 0x75A98F96, ROM_VROM, 8, 32, 2, false },
+	{ "mpr-19792.31", 0x85C81633, ROM_VROM, 10, 32, 2, false },
+	{ "mpr-19793.32", 0x7F288CC4, ROM_VROM, 12, 32, 2, false },
+	{ "mpr-19794.33", 0xE0C1C370, ROM_VROM, 14, 32, 2, false },
+	{ "mpr-19795.34", 0x90989B20, ROM_VROM, 16, 32, 2, false },
+	{ "mpr-19796.35", 0x5D1AAB8D, ROM_VROM, 18, 32, 2, false },
+	{ "mpr-19797.36", 0xF5EDC891, ROM_VROM, 20, 32, 2, false },
+	{ "mpr-19798.37", 0xAE2DA90F, ROM_VROM, 22, 32, 2, false },
+	{ "mpr-19799.38", 0x92B18AD7, ROM_VROM, 24, 32, 2, false },
+	{ "mpr-19800.39", 0x4A57B16C, ROM_VROM, 26, 32, 2, false },
+	{ "mpr-19801.40", 0xBEB79A00, ROM_VROM, 28, 32, 2, false },
+	{ "mpr-19802.41", 0xF2C3A7B7, ROM_VROM, 30, 32, 2, false },
+	{ "epr-19807.21", 0x9641CBAF, ROM_SOUND, 0x0000000, 1, 1, true },
+	{ "mpr-19785.22", 0xE7D190E3, ROM_SAMPLES, 0x0000000, 1, 1, true },
+	{ "mpr-19786.24", 0xB08D889B, ROM_SAMPLES, 0x400000, 1, 1, true },
+};
+
+// Virtua Striker 2 (Export, Step 1.5): its own program ROMs (epr-19897 to 19900, 512 KB each) and the same
+// data ROMs as the Step 2.0 set (banked CROM, Real3D textures, sound program and samples). Its program is a
+// plain copy in the fixed CROM, not a gzip: the boot copies it plainly to RAM 0. (Layout: Supermodel's
+// Config/Games.xml "vs215", CRCs verified against ROMS/vs215.zip.)
+const RomFile VS215_ROMS[] = {
+	{ "epr-19897.20", 0x25A722A9, ROM_CROM, 0x0000000, 8, 2, true },
+	{ "epr-19898.19", 0x4389D9CE, ROM_CROM, 0x0000002, 8, 2, true },
+	{ "epr-19899.18", 0x8CC2BE9F, ROM_CROM, 0x0000004, 8, 2, true },
+	{ "epr-19900.17", 0x8FB6045D, ROM_CROM, 0x0000006, 8, 2, true },
+	{ "mpr-19772.4", 0x6DB7B9D0, ROM_BANKED, 0x0000000, 8, 2, true },
+	{ "mpr-19771.3", 0x189C510F, ROM_BANKED, 0x0000002, 8, 2, true },
+	{ "mpr-19770.2", 0x91F690B0, ROM_BANKED, 0x0000004, 8, 2, true },
+	{ "mpr-19769.1", 0xDC020031, ROM_BANKED, 0x0000006, 8, 2, true },
+	{ "mpr-19776.8", 0x5B31C7C1, ROM_BANKED, 0x1000000, 8, 2, true },
+	{ "mpr-19775.7", 0xA6B32BD9, ROM_BANKED, 0x1000002, 8, 2, true },
+	{ "mpr-19774.6", 0x1D61D287, ROM_BANKED, 0x1000004, 8, 2, true },
+	{ "mpr-19773.5", 0x4E381AE7, ROM_BANKED, 0x1000006, 8, 2, true },
+	{ "mpr-19780.12", 0x38508791, ROM_BANKED, 0x2000000, 8, 2, true },
+	{ "mpr-19779.11", 0x2242B21B, ROM_BANKED, 0x2000002, 8, 2, true },
+	{ "mpr-19778.10", 0x2192B189, ROM_BANKED, 0x2000004, 8, 2, true },
+	{ "mpr-19777.9", 0xC8F216A6, ROM_BANKED, 0x2000006, 8, 2, true },
+	{ "mpr-19784.16", 0xA1CC70BE, ROM_BANKED, 0x3000000, 8, 2, true },
+	{ "mpr-19783.15", 0x47C3D726, ROM_BANKED, 0x3000002, 8, 2, true },
+	{ "mpr-19782.14", 0x43B43EEF, ROM_BANKED, 0x3000004, 8, 2, true },
+	{ "mpr-19781.13", 0x783213F4, ROM_BANKED, 0x3000006, 8, 2, true },
+	{ "mpr-19787.26", 0x856CC4AD, ROM_VROM, 0, 32, 2, false },
+	{ "mpr-19788.27", 0x72EF970A, ROM_VROM, 2, 32, 2, false },
+	{ "mpr-19789.28", 0x076ADD9A, ROM_VROM, 4, 32, 2, false },
+	{ "mpr-19790.29", 0x74CE238C, ROM_VROM, 6, 32, 2, false },
+	{ "mpr-19791.30", 0x75A98F96, ROM_VROM, 8, 32, 2, false },
+	{ "mpr-19792.31", 0x85C81633, ROM_VROM, 10, 32, 2, false },
+	{ "mpr-19793.32", 0x7F288CC4, ROM_VROM, 12, 32, 2, false },
+	{ "mpr-19794.33", 0xE0C1C370, ROM_VROM, 14, 32, 2, false },
+	{ "mpr-19795.34", 0x90989B20, ROM_VROM, 16, 32, 2, false },
+	{ "mpr-19796.35", 0x5D1AAB8D, ROM_VROM, 18, 32, 2, false },
+	{ "mpr-19797.36", 0xF5EDC891, ROM_VROM, 20, 32, 2, false },
+	{ "mpr-19798.37", 0xAE2DA90F, ROM_VROM, 22, 32, 2, false },
+	{ "mpr-19799.38", 0x92B18AD7, ROM_VROM, 24, 32, 2, false },
+	{ "mpr-19800.39", 0x4A57B16C, ROM_VROM, 26, 32, 2, false },
+	{ "mpr-19801.40", 0xBEB79A00, ROM_VROM, 28, 32, 2, false },
+	{ "mpr-19802.41", 0xF2C3A7B7, ROM_VROM, 30, 32, 2, false },
+	{ "epr-19807.21", 0x9641CBAF, ROM_SOUND, 0x0000000, 1, 1, false },
+	{ "mpr-19785.22", 0xE7D190E3, ROM_SAMPLES, 0x0000000, 1, 1, false },
+	{ "mpr-19786.24", 0xB08D889B, ROM_SAMPLES, 0x400000, 1, 1, false },
+};
+
 const Profile VF3_REV_D = {
 	"vf3", "Virtua Fighter 3 (Revision D)", "Virtua Fighter 3", nullptr, true, REV_D_ROMS, sizeof REV_D_ROMS / sizeof REV_D_ROMS[0],
 	{ 0x10, 0, false, { 0x200000, 0x4000000, 0x2000000, 0x80000, 0x800000 } },
@@ -356,13 +449,55 @@ const Profile SRALLY2 = {
 	0, 0,
 	0, 0, 0, 0, 0, 0, 0,
 	{ 0, 0, 0, 0 },
+ nullptr, 0,
+	"",
+ nullptr,
+	0,
+};
+
+// VIRTUA STRIKER 2 (Export, Step 2.0). The same board as Sega Rally 2 and no security chip, but its own program
+// ROMs and data. Its program is a plain copy in the fixed CROM (not a gzip), so the boot copies it plainly to
+// RAM 0; nothing of its addresses has been measured yet, so the advanced fields are 0 (the game runs on the
+// interpreter first). (Layout: Supermodel's Config/Games.xml "vs2", CRCs verified against ROMS/vstriker2.zip.)
+// VIRTUA STRIKER 2 (Export, Step 2.0). The same board as Sega Rally 2 and no security chip, but its own program
+// ROMs and data. Its program is a plain copy in the fixed CROM (not a gzip), so the boot copies it plainly to
+// RAM 0; nothing of its addresses has been measured yet, so the advanced fields are 0 (the game runs on the
+// interpreter first). (Layout: Supermodel's Config/Games.xml "vs2", CRCs verified against ROMS/vstriker2.zip.)
+const Profile VSTRIKER2 = {
+	"vstriker2", "Virtua Striker 2", "Virtua Striker 2", nullptr, true, VS2_ROMS, sizeof VS2_ROMS / sizeof VS2_ROMS[0],
+	{ 0x15, 0, false, { 0x400000, 0x4000000, 0x2000000, 0x80000, 0x800000 } },
+	0, 0,
+	{ 0, 0, 0, 0, 0, 0, 0 },
+	{ 0, 0, 0 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+	0, 0,
+	0, 0, 0, 0, 0, 0, 0,
+	{ 0, 0, 0, 0 },
 	nullptr, 0,
 	"",
 	nullptr,
 	0,
 };
 
-const Profile *const PROFILES[] = { &VF3_REV_D, &VF3_TB, &FV2_REV_A, &FV2O_REV, &SRALLY2, nullptr };
+// VIRTUA STRIKER 2 (Export, Step 1.5). The same board as the Step 2.0 set but its own program ROMs; nothing of
+// its addresses has been measured yet, so the advanced fields are 0 (the game runs on the interpreter first).
+const Profile VS215 = {
+	"vs215", "Virtua Striker 2 (Step 1.5)", "Virtua Striker 2", nullptr, false, VS215_ROMS, sizeof VS215_ROMS / sizeof VS215_ROMS[0],
+	{ 0x15, 0, false, { 0x200000, 0x4000000, 0x2000000, 0x80000, 0x800000 } },
+	0, 0,
+	{ 0, 0, 0, 0, 0, 0, 0 },
+	{ 0, 0, 0 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+	0, 0,
+	0, 0, 0, 0, 0, 0, 0,
+	{ 0, 0, 0, 0 },
+ nullptr, 0,
+	"",
+ nullptr,
+	0,
+};
+
+const Profile *const PROFILES[] = { &VF3_REV_D, &VF3_TB, &FV2_REV_A, &FV2O_REV, &SRALLY2, &VSTRIKER2, &VS215, nullptr };
 
 const Profile *find_profile(const char *set)
 {

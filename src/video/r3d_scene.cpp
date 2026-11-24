@@ -191,6 +191,11 @@ void SceneBuilder::mult_matrix(uint32_t index)
 
 void SceneBuilder::viewport(uint32_t addr, Scene &scene, int guard)
 {
+			if (widen > 1) {
+			planes.lv /= (widen * 1.25f);
+			planes.rv /= (widen * 1.25f);
+		}
+
 	for (; guard < 64; guard++) {
 		if (!(addr & 0xFFFFFF))
 			return;
@@ -211,13 +216,18 @@ void SceneBuilder::viewport(uint32_t addr, Scene &scene, int guard)
 		matrix_base = reinterpret_cast<const float *>(culling(v[0x16] & 0xFFFFFF));
 		lod_table = reinterpret_cast<const float *>(culling(v[0x17] & 0xFFFFFF));
 		float cv = as_float(v[8]), cw = as_float(v[9]), io = as_float(v[10]), jo = as_float(v[11]);
+				// Parche de frustum para corregir la compresión horizontal en vstriker2 (Step 2.0 híbrido)
+		if (node_shift == 2 && (cv > 100.0f || cv < 1e-4f)) {
+			cv = 1.0f;
+			cw = 1.3333f;
+			io = 0.5f;
+			jo = 0.5f;
+		}
 		planes = { as_float(v[0xC]), as_float(v[0xD]), as_float(v[0xE]), as_float(v[0xF]),
 			as_float(v[0x10]), as_float(v[0x11]), as_float(v[0x12]), as_float(v[0x13]) };
-		if (p.full_screen && widen > 1) {
-			// x / widen in the side planes' tests: their edges as far out as the picture goes (the planes' normals
-			// shortened with it: a sphere's distance read short, never culled sooner)
-			planes.lv /= widen;
-			planes.rv /= widen;
+		if (widen > 1) {
+			planes.lv /= (widen * 1.25f);
+			planes.rv /= (widen * 1.25f);
 		}
 		p.left = (0.0f - jo) / cv;
 		p.right = (1.0f - jo) / cv;

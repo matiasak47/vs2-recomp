@@ -19,7 +19,11 @@
 #include <cstdio>
 #include <cstdlib>
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__)
+#if defined(_MSC_VER)
+#include <intrin.h>
+#else
 #include <x86intrin.h>
+#endif
 #define SNDPROF_TSC 1
 #endif
 

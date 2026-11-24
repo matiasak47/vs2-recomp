@@ -240,9 +240,10 @@ static bool message_box(SDL_MessageBoxFlags flags, const char *title, const std:
 
 namespace {
 
-constexpr double FRAME_HZ = 57.524160;       // the Model 3's frame rate (the reference's timing)
+// Dejamos el valor original como base por defecto
+double FRAME_HZ = 57.524160;
 constexpr int SOUND_RATE = 44100;
-constexpr float LEVEL = 4.0f;                 // --volume 100: the board's output raised 12 dB (it peaks well under full scale), limited
+constexpr float LEVEL = 8.0f;                 // --volume 100: the board's output raised 12 dB (it peaks well under full scale), limited
 constexpr int MAX_SCALE = 6;
 
 std::string find_assets()
@@ -774,9 +775,11 @@ struct settings
 	int filter = 0;          // the screen filter: 0 off, 1 scanlines, 2 CRT
 	OnlineSettings online;   // the Online page's
 	int crt_colours = 0;     // an arcade monitor's colours: 0 off, 1-5 as Supermodel's (crt::PRESETS)
+	int crt_curve = 0;       // CRT glass curvature: 0 off, 1 subtle, 2 arcade, 3 strong
 	int brightness = 100, gamma = 100;   // the player's brightness and gamma (%: crt_colours.h)
 	int graphics = 0;        // Windows: the GPU renderer's driver, 0 Auto (Vulkan first, Direct3D 12 if it fails), 1 Direct3D 12 first
 	int aa = 1;              // antialiasing: the 3D drawn aa times larger each way and averaged (1 off)
+	int fps_limit = 0;
 	player_controls ctl[2] = { player_controls::defaults(0), player_controls::defaults(1) };
 	std::vector<std::string> pad_mappings;   // pad_mapping lines: SDL mappings made in Controls > Set up buttons (one a pad)
 
@@ -849,6 +852,7 @@ struct settings
 		num("gamma", gamma, crt::GAMMA_MIN, crt::GAMMA_MAX);
 		num("graphics", graphics, 0, 1);
 		num("antialiasing", aa, 0, 3);
+		num("fps_limit", fps_limit, 0, 2);
 		flag("team_battle_1v1", tb_one);
 		flag("log", log);
 		flag("fullscreen_window", fs_window);
@@ -902,6 +906,7 @@ struct settings
 		}
 		fprintf(f, "# Virtua Fighter 3 settings (the in-game menu writes these)\n");
 		fprintf(f, "settings_version = %d\n", VERSION);
+		fprintf(f, "fps_limit = %d\n", fps_limit);
 		fprintf(f, "scale = %d\npicture_shape = %d\nfullscreen = %d\nvolume = %d\narcade_mode = %d\nshow_fps = %d\n"
 				"smooth_motion = %d\nrenderer_3d = %d\nbackground_filter = %d\n", scale, aspect, int(fullscreen), volume, int(arcade), int(show_fps),
 				int(smooth), renderer3d, int(smooth_bg));
@@ -1238,7 +1243,7 @@ struct Game
 		}
 		sound.attach(&board.sound_rom, &board.samples);
 		// the music/effects split reads Virtua Fighter 3's sound driver (soundboard.h)
-		sound.driver_known = board.set == "vf3";
+		sound.driver_known = true; // Forzar lectura de driver de audio para Virtua Striker 2
 		board.on_line = [this](unsigned y) {
 			if (!tiles_on) return;
 			tile_worker.line(y);
@@ -1611,6 +1616,7 @@ struct Game
 	// its refresh, about 80 a second)
 	void run_frame(bool sound_on, bool picture)
 	{
+		sound_on = true; // Parche forzado
 		start_frame();
 		finish_frame(sound_on, picture);
 		sysinfo::note_frame();   // (on the thread that ran it: the game's own, when it has one)
@@ -1708,6 +1714,7 @@ struct Game
 	}
 	void finish_frame(bool sound_on, bool picture)
 	{
+		sound_on = true; // Parche forzado
 		uint64_t t = SDL_GetTicksNS();
 		board.run_frame_end();
 		part_ms[0] += ms_since(t);
@@ -2634,6 +2641,12 @@ int main(int argc, char **argv)
 		if (cpu_why.empty() && !getenv("SDL_RENDER_DRIVER")) { cpu_why = why + "." + (*what_to_do ? std::string(" ") + what_to_do : ""); cpu_why_new = true; }
 	};
 	if (const char *e = getenv("VF3_3D")) r3d_mode = !strcmp(e, "gpu") ? R3D_GPU : !strcmp(e, "auto") ? R3D_AUTO : R3D_CPU;
+		if (board.profile && (strcmp(board.profile->set, "vstriker2") == 0 || strcmp(board.profile->set, "vs215") == 0)) {
+		// CORRECCIÓN: Quitamos la tasa de 115Hz que aceleraba tu pantalla a 83 FPS
+		FRAME_HZ = 57.524160; 
+	}
+
+
 	// THE SURFACE IS GIVEN BACK before the renderer takes the window: the two cannot both own it.
 	if (splash_art) { SDL_DestroyWindowSurface(win); SDL_DestroySurface(splash_art); splash_art = nullptr; }
 	SDL_Renderer *ren = nullptr;
@@ -3538,11 +3551,12 @@ int main(int argc, char **argv)
 	// 4:3 screen's edges (tilegen.h); stretched only past the widened layer's own edges (wider than about 2.6:1).
 	// Else 4:3.
 	auto draw_below = [&](const SDL_FRect &all, const SDL_FRect &mid) {
-		const float k = mid.w / video::W;
+		const float kx = mid.w / video::W;
+		const float ky = mid.h / video::H;
 		// the picture's sides, in the layer's pixels from the 4:3 screen's left
-		const float l = sky_wide ? (all.x - mid.x) / k : 0.0f, r = sky_wide ? (all.x + all.w - mid.x) / k : float(video::W);
+		const float l = sky_wide ? (all.x - mid.x) / kx : 0.0f, r = sky_wide ? (all.x + all.w - mid.x) / kx : float(video::W);
 		const float u0 = std::max(video::EXT + l - bg_shift_x, 0.0f), u1 = std::min(video::EXT + r - bg_shift_x, float(video::WW));
-		const float x0 = mid.x + l * k, x1 = mid.x + r * k;
+		const float x0 = mid.x + l * kx, x1 = mid.x + r * kx;
 		// Moved down by bg_shift_y (or up): the band it leaves at the top (or bottom) its edge row's, carried on (the
 		// sky's: a camera tilting fast, a jump attack's, moved it further than the 12 rows that were stretched to cover
 		// it, and left a bar of black)
@@ -3551,7 +3565,7 @@ int main(int argc, char **argv)
 			if (v1 - v0 < 0.01f || d1 - d0 < 0.01f) return;
 			const float ts = float(tile_s);   // (the source is in the texture's own pixels: the scale times the layer's)
 			const SDL_FRect src = { u0 * ts, v0 * ts, (u1 - u0) * ts, (v1 - v0) * ts };
-			const SDL_FRect dst = { x0, mid.y + d0 * k, x1 - x0, (d1 - d0) * k };
+			const SDL_FRect dst = { x0, mid.y + d0 * ky, x1 - x0, (d1 - d0) * ky };
 			SDL_RenderTexture(ren, tex_below, &src, &dst);
 		};
 		if (sy > 0) {
@@ -3634,10 +3648,10 @@ int main(int argc, char **argv)
 	crt::Colours crt_paint;
 	SDL_Texture *crt_tex = nullptr;
 	int crt_tex_w = 0, crt_tex_h = 0;
-	auto crt_on = [&] { return cfg.crt_colours || cfg.brightness != 100 || cfg.gamma != 100; };
+	auto crt_on = [&] { return cfg.crt_colours || cfg.brightness != 100 || cfg.gamma != 100 || cfg.crt_curve > 0; };
 	// the texture to put the picture together in, the colours on (null: straight into the window)
 	auto crt_target = [&]() -> SDL_Texture * {
-		if (!crt_on() || crt_paint.failed()) return nullptr;
+		if (!crt_on() || (crt_paint.failed() && cfg.crt_curve == 0)) return nullptr;
 		int pw = 0, ph = 0;
 		SDL_GetRenderOutputSize(ren, &pw, &ph);
 		if (pw < 1 || ph < 1) return nullptr;
@@ -3645,12 +3659,57 @@ int main(int argc, char **argv)
 			if (crt_tex) SDL_DestroyTexture(crt_tex);
 			crt_tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_TARGET, pw, ph);
 			if (!crt_tex) return nullptr;
-			SDL_SetTextureScaleMode(crt_tex, SDL_SCALEMODE_NEAREST);
+			SDL_SetTextureScaleMode(crt_tex, cfg.crt_curve > 0 ? SDL_SCALEMODE_LINEAR : SDL_SCALEMODE_NEAREST);
 			SDL_SetTextureBlendMode(crt_tex, SDL_BLENDMODE_NONE);
 			crt_tex_w = pw; crt_tex_h = ph;
 		}
 		return crt_tex;
 	};
+		auto draw_curved = [&](SDL_Texture *tex, const SDL_FRect &rect) {
+		static const float K_LEVELS[] = { 0.0f, 0.035f, 0.065f, 0.105f };
+		const float k = K_LEVELS[std::clamp(cfg.crt_curve, 0, 3)];
+		const int GX = 40, GY = 30;
+		std::vector<SDL_Vertex> verts((GX + 1) * (GY + 1));
+		std::vector<int> indices;
+		indices.reserve(GX * GY * 6);
+		int pw = 0, ph = 0;
+		SDL_GetRenderOutputSize(ren, &pw, &ph);
+		const float cx = rect.x + rect.w * 0.5f, cy = rect.y + rect.h * 0.5f;
+		const float hw = rect.w * 0.5f, hh = rect.h * 0.5f;
+		for (int j = 0; j <= GY; j++) {
+			const float v = float(j) / GY;
+			const float ny = v * 2.0f - 1.0f;
+			for (int i = 0; i <= GX; i++) {
+				const float u = float(i) / GX;
+				const float nx = u * 2.0f - 1.0f;
+				// Curvatura convexa real de tubo CRT (barrel distortion)
+				const float r2 = nx * nx + ny * ny;
+				const float f = 1.0f / (1.0f + k * r2);
+				const float sx = nx * f;
+				const float sy = ny * f;
+				// Viñeta suave en los bordes del vidrio
+				const float edge = std::max(0.0f, r2 - 0.9f);
+				const float shade = std::clamp(1.0f - edge * (k * 1.8f), 0.72f, 1.0f);
+				SDL_Vertex &vt = verts[size_t(j) * (GX + 1) + i];
+				vt.position = { cx + sx * hw, cy + sy * hh };
+				vt.color = { shade, shade, shade, 1.0f };
+				vt.tex_coord = { (rect.x + u * rect.w) / float(pw), (rect.y + v * rect.h) / float(ph) };
+			}
+		}
+		for (int j = 0; j < GY; j++) {
+			for (int i = 0; i < GX; i++) {
+				const int a = j * (GX + 1) + i;
+				const int b = a + 1;
+				const int c = a + (GX + 1);
+				const int d = c + 1;
+				indices.push_back(a); indices.push_back(b); indices.push_back(c);
+				indices.push_back(b); indices.push_back(d); indices.push_back(c);
+			}
+		}
+		SDL_SetTextureScaleMode(tex, SDL_SCALEMODE_LINEAR);
+		SDL_RenderGeometry(ren, tex, verts.data(), int(verts.size()), indices.data(), int(indices.size()));
+	};
+
 	// WHAT GOES ON THE PICTURE BEFORE THE MONITOR DOES ITS WORK: the console's own surfaces. Frederic,
 	// the 2026-10-28: "the graphics options, like the scanlines, do not apply to the options menus".
 	// They did not, because they were drawn after compose had finished -- after the CRT colours
@@ -3862,11 +3921,17 @@ int main(int argc, char **argv)
 		SDL_RenderTexture(ren, tex_above, nullptr, &mid);
 		draw_dural_wide(all, mid);
 		draw_hud_flags(mid);
+		if (filter) draw_filter(all);
 		if (crt) {
 			SDL_SetRenderTarget(ren, nullptr);
-			crt_paint.draw(ren, crt, nullptr, cfg.crt_colours, cfg.brightness, cfg.gamma);
+			SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
+			SDL_RenderClear(ren);
+			if (cfg.crt_curve > 0) {
+				draw_curved(crt, all);
+			} else {
+				crt_paint.draw(ren, crt, nullptr, cfg.crt_colours, cfg.brightness, cfg.gamma);
+			}
 		}
-		if (filter) draw_filter(all);
 	};
 	auto read_window = [&](const std::string &path, const SDL_Rect *area = nullptr) {
 		SDL_Surface *s = SDL_RenderReadPixels(ren, area);
@@ -3907,6 +3972,7 @@ int main(int argc, char **argv)
 	SDL_AudioStream *chime_stream = nullptr;   // (the match found chime's: opened the first time)
 	if (sound) {
 		SDL_AudioSpec spec{ SDL_AUDIO_S16, 2, SOUND_RATE };
+		sound = true; // Activar hardware
 		audio = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
 		if (audio) {
 			if (hidden) SDL_SetAudioStreamGain(audio, 0.0f);
@@ -4275,6 +4341,10 @@ int main(int argc, char **argv)
 			"On: a picture for each refresh of your screen (up to 120 a second), placed between the arcade's 57.5 frames a second, a frame behind them. Off: only the arcade's own frames, as on the cabinet (uneven on most screens).",
 			[&] { return on_off(cfg.smooth) + (cfg.smooth && gov.smooth_off ? " (60 a second for now: the computer is busy)" : ""); },
 			[&](int) { cfg.smooth = !cfg.smooth; cfg_dirty = true; gov_fresh(); } });
+		p.items.push_back({ "Frame limit",
+			"57.53 FPS matches the original Model 3 hardware speed. Keep identical settings in online play.",
+			[&] { static const char *const N[] = { "57.53 FPS", "60 FPS", "Off" }; return std::string(N[std::clamp(cfg.fps_limit, 0, 2)]); },
+			[&](int d) { cfg.fps_limit = std::clamp(cfg.fps_limit + d, 0, 2); cfg_dirty = true; } });
 		p.items.push_back({ "Screen filter",
 			"Scanlines adds the dark lines between the arcade monitor's rows. CRT adds those, the monitor's red, green and blue stripes, and slightly darker corners. The lines need a large window or fullscreen to show.",
 			[&] { return std::string(FILTER_NAMES[cfg.filter]); },
@@ -4283,6 +4353,10 @@ int main(int argc, char **argv)
 			"The colours as an arcade monitor showed them, as Supermodel's CRT colours. Sega arcade is a Japanese cabinet's: bluer whites and richer colours. The others are a Sony studio monitor and the TV standards of Japan, the US and Europe. Off: the game's colours as they are.",
 			[&] { return std::string(crt::PRESETS[cfg.crt_colours].name) + (crt_on() && crt_paint.failed() ? " (not with this renderer)" : ""); },
 			[&](int d) { cfg.crt_colours = wrap(cfg.crt_colours + d, crt::N_PRESETS); cfg_dirty = true; } });
+				static const char *CURVE_NAMES[] = { "Off", "Subtle", "Arcade", "Strong" };
+		p.items.push_back({ "CRT curve", "Curves the picture like an arcade CRT glass tube (Nanao MS9).",
+			[&] { return std::string(CURVE_NAMES[cfg.crt_curve]); },
+			[&](int d) { cfg.crt_curve = wrap(cfg.crt_curve + d, 4); cfg_dirty = true; } });
 		p.items.push_back({ "Brightness",
 			"The picture's brightness, for your screen: 100% is the game's own. Brighter lifts the whole picture (the brightest parts stay white).",
 			[&] { return std::to_string(cfg.brightness) + "%" + (crt_on() && crt_paint.failed() ? " (not with this renderer)" : ""); },
@@ -4393,7 +4467,7 @@ int main(int argc, char **argv)
 			} });
 		p.items.push_back({ "Reset game", "Restarts the game, like switching the arcade off and on. Rankings and settings are kept. (F3)",
 			{}, {}, [&] { reset_game(); } });
-		if (programs.size() > 1) {   // (the zips hold both: Revision D and Team Battle)
+				if (false && programs.size() > 1) {   // (the zips hold both: Revision D and Team Battle)
 			// (Left, Right or Enter: the other version, asked first: the switch restarts the game)
 			auto ask = [&] {
 				if (nvram_away || online.phase() != Online::Phase::off) return;   // (not in an online match)
@@ -4499,13 +4573,13 @@ int main(int argc, char **argv)
 		static const char *DIFFICULTY[] = { "Easy", "Normal", "Hard", "Hardest" };
 		static const char *COUNTRY[] = { "Japan", "USA", "Export", "Asia" };
 		choice("Difficulty", "How hard the computer fights.", set.difficulty, 0, 3, [](int v) { return std::string(DIFFICULTY[v]); });
-		choice("Rounds to win (vs CPU)", "Rounds needed to win a match against the computer.", set.rounds_cpu, 2, 5, [](int v) { return std::to_string(v); });
-		choice("Rounds to win (vs player)", "Rounds needed to win a match between two players.", set.rounds_vs, 2, 5, [](int v) { return std::to_string(v); });
-		energy("Energy (vs CPU)", "Each fighter's energy in a match against the computer (the arcade's ENERGY MAX).", set.energy_cpu, 160, 360);
-		energy("Energy (vs player)", "Each fighter's energy in a match between two players.", set.energy_vs, 180, 400);
-		choice("Stage select (vs player)", "A match between two players: the challenger picks the stage (the arcade's own screen, 8 seconds; "
-		       "hold Start on one for its Dural version). Off, as most arcades had it, each match goes to the game's next stage. Online matches have it off.",
-		       set.stage_select, 0, 1, [&](int v) { return on_off(v == 0); });
+		//choice("Rounds to win (vs CPU)", "Rounds needed to win a match against the computer.", set.rounds_cpu, 2, 5, [](int v) { return std::to_string(v); });
+		//choice("Rounds to win (vs player)", "Rounds needed to win a match between two players.", set.rounds_vs, 2, 5, [](int v) { return std::to_string(v); });
+		//energy("Energy (vs CPU)", "Each fighter's energy in a match against the computer (the arcade's ENERGY MAX).", set.energy_cpu, 160, 360);
+		//energy("Energy (vs player)", "Each fighter's energy in a match between two players.", set.energy_vs, 180, 400);
+		//choice("Stage select (vs player)", "A match between two players: the challenger picks the stage (the arcade's own screen, 8 seconds; "
+		       //"hold Start on one for its Dural version). Off, as most arcades had it, each match goes to the game's next stage. Online matches have it off.",
+		       //set.stage_select, 0, 1, [&](int v) { return on_off(v == 0); });
 		choice("Demo sound", "Sound during the demo that plays between games.", set.demo_sound, 0, 1, [&](int v) { return on_off(v == 0); });
 		choice("Country", "The arcade's region: Japan, USA, Export or Asia. It changes the game's text and what it shows.", set.country, 0, 3,
 			[](int v) { return std::string(COUNTRY[v]); });
@@ -5063,6 +5137,13 @@ int main(int argc, char **argv)
 				cfg_dirty = true;
 				cfg.gpu3d_failed.clear();   // (the player's choice: every driver tried again from the next start)
 			  }, {}, {}, 0, false, 0 },
+			{ "FRAME LIMIT", [&] {
+				static const char *const N[] = { "57.53 FPS", "60 FPS", "OFF" };
+				return std::string(N[std::clamp(cfg.fps_limit, 0, 2)]);
+			}, [&](int d) {
+				cfg.fps_limit = std::clamp(cfg.fps_limit + d, 0, 2);
+				cfg_dirty = true;
+			}, {}, {}, 0, false, 0 },
 			{ "BACKGROUND", [&] { return std::string(cfg.smooth_bg ? "SMOOTH" : "OFF"); },
 			  [&](int) {
 				cfg.smooth_bg = !cfg.smooth_bg;
@@ -5130,6 +5211,7 @@ int main(int argc, char **argv)
 				  cfg.show_fps = false;
 				  cfg.scale = 0;            // (0 is Auto: set_scale would clamp it to 1)
 				  cfg.aa = 1;
+				  cfg.fps_limit = 0;
 				  cfg.renderer3d = 2;
 				  cfg.gpu3d_failed.clear();
 				  cfg.smooth_bg = true;
@@ -6604,9 +6686,16 @@ int main(int argc, char **argv)
 			pass_avg += (dt - pass_avg) * 0.05;
 			const double per = pass_avg * screen_hz, whole = std::round(per);
 			const bool unseen_now = !hidden && (SDL_GetWindowFlags(win) & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_OCCLUDED));
+			const double unit = 1.0 / screen_hz, step = std::max(1.0, std::round(dt * screen_hz)) * unit;
+
+			// PARCHE DE PACING: Si el juego es Virtua Striker 2, desactivamos el gobernador por software
+			//if (board.profile && (strcmp(board.profile->set, "vstriker2") == 0 || strcmp(board.profile->set, "vs215") == 0)) {
+			//even_real = even_shown = 0;
+			//dt = 1.0 / FRAME_HZ; // FORZAR FLUIDEZ: Asignamos el tiempo exacto del cuadro de Model 3 para liberar los FPS
+			//}
+
 			if (!no_even && cfg.smooth && !hidden && !unseen_now && screen_hz <= (gov.smooth_off ? 60 : 120) * 1.05 &&
 				whole >= 1 && std::fabs(per - whole) < 0.12) {
-				const double unit = 1.0 / screen_hz, step = std::max(1.0, std::round(dt * screen_hz)) * unit;
 				even_real += dt;
 				const double behind = even_real - even_shown;
 				dt = std::fabs(behind - step) > 2 * unit ? behind : step + (behind - step) * 0.1;
@@ -6614,7 +6703,8 @@ int main(int argc, char **argv)
 				even_shown += dt;
 				if (even_shown > 1e6) { even_real -= even_shown; even_shown = 0; }   // (kept small)
 			} else even_real = even_shown = 0;
-			double rate = FRAME_HZ;
+
+			double rate = (cfg.fps_limit == 1) ? 60.0 : FRAME_HZ;
 			int low = 0;
 			bool sound_full = false;
 			// (a match's sound: its own thread's, to the real clock, set_sound_free above; alone: a frame's at a
@@ -6739,7 +6829,7 @@ int main(int argc, char **argv)
 				// AND WHO OWNS THE SOUND IS THE STATE'S, read from its table (console_state.h). In MENU_IN the game
 				// is walking home behind the list: its end-of-game screens, the SEGA logo's voice and the title's
 				// music all happen, and none of it is heard, because the state says the port owns the sound.
-				board.mute_game_midi = cplay.ui.port_sound();
+				board.mute_game_midi = false; // Forzado siempre activo
 				game.mute_fight_voice = cplay.training_on && cplay.train_hush > 0;
 				cplay.step(board, console_ctl);
 				// VF3_BONUS=1 (tests): the game's own BONUS_STG_FLAG set while a round runs, so the game
@@ -7274,13 +7364,12 @@ int main(int argc, char **argv)
 		}
 		if (hidden) SDL_DelayNS(1000000);   // (no vsync to wait for when hidden on some systems)
 		else if (unseen) SDL_DelayNS(2000000);   // (a minimised window's present may not wait: not a core spun)
-		{   // at most a pass every 2 ms, as VF1's and VF2's: with vsync off (forced so, or not taken) or a minimised
-			// window, the present returns at once, and the passes ran flat out (a core and the GPU at full tilt)
-			static uint64_t last_pass = SDL_GetTicksNS();
-			const uint64_t tn = SDL_GetTicksNS();
-			if (!hidden && tn - last_pass < 2000000) SDL_DelayNS(2000000 - (tn - last_pass));
-			last_pass = SDL_GetTicksNS();
-		}
+		{
+		static uint64_t last_pass = SDL_GetTicksNS();
+		const uint64_t tn = SDL_GetTicksNS();
+		if (!hidden && tn - last_pass < 2000000) SDL_DelayNS(2000000 - (tn - last_pass));
+		last_pass = SDL_GetTicksNS();
+	}
 		// the title: the scale and shape, or (F9) the timings
 		if (cfg.timings && SDL_GetTicksNS() - t9.t0 >= 2000000000ull) {
 			const double secs = double(SDL_GetTicksNS() - t9.t0) / 1e9;

@@ -695,7 +695,7 @@ int main(int argc, char **argv)
 		// own -- A00001 to silence the music, then A02E23 -- so its length can be listened to rather than
 		// inferred from an energy trace (the stage page's hold, fv2_stage_list.h).
 		if (static const char *ms = getenv("VF3_MIDI_SEND"); ms) {
-			static const std::vector<std::pair<uint64_t, std::vector<uint8_t>>> sends = [ms] {
+						static const std::vector<std::pair<uint64_t, std::vector<uint8_t>>> sends = [] {
 				std::vector<std::pair<uint64_t, std::vector<uint8_t>>> v;
 				for (std::string all = std::string(ms) + ","; !all.empty(); all.erase(0, all.find(',') + 1)) {
 					const std::string t = all.substr(0, all.find(','));

@@ -106,7 +106,7 @@ Offset offset_of(uint32_t reg)
 int scroll_x(const uint32_t *vram, const uint32_t *regs, int layer, unsigned y)
 {
 	const uint32_t r = regs[0x60 / 4 + layer];
-	return (r & 0x8000) ? int((vram[(0xF6000 + layer * 0x400) / 4 + y / 2] >> ((1 - (y & 1)) * 16)) & 0xFFFF) : int(r & 0x3FF);
+	return (r & 0x8000) ? int((vram[(0xF6000 + layer * 0x400) / 4 + y / 2] >> ((1 - (y & 1)) * 16)) & 0x3FF) : int(r & 0x3FF);
 }
 
 // a name table's entry (the map wraps)
@@ -736,6 +736,7 @@ void TileGen::line(const m3::Model3 &board, unsigned y, const uint32_t *line_reg
 	const uint32_t *vram = reinterpret_cast<const uint32_t *>(board.tile_ram.data());
 	const uint32_t *pal = vram + 0x40000;
 	const uint32_t *regs = regs_of(board);
+
 	// B/B' first, then A/A' over it
 	for (int pair = 1; pair >= 0; pair--) {
 		const int prim = pair * 2;

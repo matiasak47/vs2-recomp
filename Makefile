@@ -129,7 +129,12 @@ $(BIN)/menutest: $(call objs,src/host/menu.cpp src/host/online.cpp src/host/vf3_
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(SDL_LIBS) $(FT_LIBS) $(LDLIBS)
 
-$(BIN)/vf3: $(call objs,$(CORE) $(HOST) $(RML_SRC)) $(SLJIT_OBJ)
+$(OBJ)/icon.res: assets/icon/VF3.ico
+	@mkdir -p $(dir $@)
+	@printf '1 ICON "%s"\n' "$<" > $(OBJ)/icon.rc
+	windres $(OBJ)/icon.rc -O coff -o $@
+
+$(BIN)/vf3: $(call objs,$(CORE) $(HOST) $(RML_SRC)) $(SLJIT_OBJ) $(OBJ)/icon.res
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) $^ -o $@ $(SDL_LIBS) $(FT_LIBS) $(LDLIBS) -lpthread
 

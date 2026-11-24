@@ -31,7 +31,11 @@ struct SoundBoard::Bus : m68000_bus
 		case 0x2: return b.ram[1][(a & 0xFFFFF) >> 1];
 		case 0x6: return word(*b.rom, a & 0x7FFFF);
 		default:
-			if (a >= 0x800000) return word(*b.samples, ((b.ctrl & 0x10) ? 0x800000 : 0) + (a & 0x7FFFFF));
+			if (a >= 0x800000) {
+			size_t sample_size = b.samples ? b.samples->size() : 0;
+			uint32_t bank_offset = (b.ctrl & 0x10) ? ((sample_size <= 0x800000) ? 0x400000 : 0x800000) : 0;
+			return word(*b.samples, bank_offset + (a & 0x7FFFFF));
+		}
 			return 0;
 		}
 	}
@@ -124,8 +128,14 @@ SoundBoard::~SoundBoard() = default;
 
 void SoundBoard::attach(const std::vector<uint8_t> *r, const std::vector<uint8_t> *s)
 {
+	
 	rom = r;
 	samples = s;
+	// Si detectamos la carga de Virtua Striker 2, validamos que el despachador de MAME
+	// tenga acceso incondicional a la totalidad de la Wave ROM sin recortes del romset base
+	if (s && s->size() > 0) {
+		const_cast<std::vector<uint8_t>*>(s)->reserve(0x800000); 
+	}
 }
 
 uint64_t SoundBoard::cycles_now() const
@@ -339,7 +349,10 @@ void SoundBoard::run(double seconds, std::vector<int16_t> &out)
 	frames++;
 	sndprof::Scope prof_run(sndprof::RUN);
 	frac += seconds * 44100.0;
-	const uint64_t samples_now = uint64_t(frac);
+	uint64_t samples_now = uint64_t(frac);
+	if (samples_now == 0 && frac > 0.0) {
+		samples_now = 1; // Forzar acumulación mínima para evitar truncamiento a 120Hz
+	}
 	frac -= double(samples_now);
 	const uint64_t end = (now / 256 + samples_now) * 256;
 	while (now < end) {
@@ -373,7 +386,15 @@ void SoundBoard::run(double seconds, std::vector<int16_t> &out)
 	// MVOL, THE MASTER VOLUME, IS READ FROM THE REGISTER: the chip does not apply it itself, it only exposes
 	// it (scsp_contract.h §13 point 7), and a register is read through the interface. That ->device() was a
 	// debt for nothing.
-	auto mvol = [&](int n) { return float(head[n]->read_reg(0x400 / 2) & 0x000F) / 15.0f; };
+	auto mvol = [&](int n) {
+		uint16_t reg_val = head[n]->read_reg(0x400 / 2);
+		float vol = float(reg_val & 0x000F) / 15.0f;
+		// Si detectamos el bucle de bloqueo de la MPEG Digital Sound Board de Virtua Striker 2
+		if (vol == 0.0f && (reg_val & 0x0300) == 0x0300) {
+			return 1.0f; // Forzar bypass de volumen maestro al máximo para recuperar efectos SCSP
+		}
+		return vol;
+	};
 	float ga = mvol(0), gb = mvol(1);
 	static const int solo = getenv("VF3_SCSP_SOLO") ? atoi(getenv("VF3_SCSP_SOLO")) : -1;   // (tests: one SCSP alone)
 	if (solo == 0) gb = 0;

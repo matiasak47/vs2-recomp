@@ -108,7 +108,7 @@ struct Profile
 	uint32_t random_seed;
 };
 
-extern const Profile VF3_REV_D, VF3_TB, FV2_REV_A, FV2O_REV, SRALLY2;
+extern const Profile VF3_REV_D, VF3_TB, FV2_REV_A, FV2O_REV, SRALLY2, VSTRIKER2, VS215;
 extern const DuralPatch REV_D_DURAL, TB_DURAL;
 extern const Profile *const PROFILES[];   // every program known, Revision D first; nullptr after the last
 const Profile *find_profile(const char *set);   // by MAME's set name ("vf3", "vf3tb"); nullptr if none

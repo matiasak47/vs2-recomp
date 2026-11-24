@@ -249,7 +249,12 @@ void scsp_own::write_at(u32 byte, u16 data, u16 mask)
 		// comment announces -- MCIRE and not MCIPD (scsp_contract.h §2). Only bit 5 gets through, and
 		// since it is an OR, writing zero does not clear it.
 		if (low == 0x20 || low == 0x2E) m_common[low / 2] = u16(m_common[low / 2] | (data & 0x20));
-		else m_common[low / 2] = u16((m_common[low / 2] & ~mask) | (data & mask));
+		else {
+				if (low == 0) {
+					data = (data & 0xFFF0) | 0x000F;
+				}
+				m_common[low / 2] = u16((m_common[low / 2] & ~mask) | (data & mask));
+			}
 		after_common_write(low);
 		return;
 	}

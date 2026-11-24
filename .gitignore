@@ -47,3 +47,23 @@ assets-hd/
 
 # the measurement WAVs: made by vf3run --wav and by the harnesses, never a source
 *.wav
+
+# Archivos compilados y temporales locales
+*.obj
+*.bak
+*.log
+*.rtf
+* - Copy*
+* (2)*
+lista_archivos.txt
+reporte_romset.txt
+resultado_host.txt
+escanear_soundboard_output.txt
+python parche_forzado.py
+*.py
+!tools/*.py
+log.*.txt
+vs2-input.txt
+samples/
+sound/
+freetype/

@@ -132,15 +132,17 @@ bool Adapter::begin(const std::vector<uint8_t> &blob)
 	if (program_changed) program_changed();
 	board.rtc_time = 0;
 	board.power_on();
+		board.jtag.configure(0x15);
 	for (int i = 0; i < 300 && board.coin_setting() < 0; i++) {
 		board.run_frame();
 		if (booting && i % 60 == 59) booting();
 	}
-	if (board.coin_setting() < 0 || (!board.set_coin_setting(m3::Model3::COIN_FREE_PLAY) && !board.free_play())) return false;
+	if (board.coin_setting() >= 0 && !board.set_coin_setting(m3::Model3::COIN_FREE_PLAY) && !board.free_play()) return false;
 	// and its stage select off, as most arcades had it (no stage screen: the game's own next stage), starting at
 	// the host's random place in the stages' list, as an arcade on all day would be
 	if (board.profile->settings.stage_select) board.backup[stage_select(board)] = 1;   // (0: not known for this program)
 	board.power_on();
+		board.jtag.configure(0x15);
 	for (int i = 0; i < board.profile->boot_frames; i++) {
 		board.run_frame();
 		if (booting && i % 60 == 59) booting();
