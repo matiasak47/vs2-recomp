@@ -25,7 +25,7 @@ Native Windows x64 static recompilation of **Virtua Striker 2 (Sega Model 3 Step
 Place the following MAME ROM archives inside the **`roms\`** folder located next to the executable:
 
 - **`roms\vs215.zip`** — *Virtua Striker 2 (Step 1.5)* (Main set)
-- **`roms\vstriker2.zip`** — *Virtua Striker 2* (Parent set, required if your `vs215.zip` is a split MAME set)
+- **`roms\vstriker2.zip`** (if your rom is named vs2.zip, rename it to vstriker2.zip) — *Virtua Striker 2* (Parent set, required if your `vs215.zip` is a split MAME set)
 
 *(Note: If you use a full "non-merged" `vs215.zip`, that single file inside `roms\` is enough).*
 
