@@ -4,7 +4,6 @@
 </div>
 
 
-# Virtua Striker 2 (Step 1.5) — Native PC Static Recompilation (Windows x64)
 
 Built upon [mr-finster/vf3-recomp](https://github.com) and [penpenlovesrei-dotcom/vf3-recomp (fv2)](https://github.com).
 
